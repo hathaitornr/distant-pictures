@@ -1,17 +1,116 @@
-<!doctype html>
+            <!doctype html>
 <html>
     <head>
         <meta charset="utf8"/>
         <title>Interaction Engine - Hello You!</title>
         <script src="/socket.io/socket.io.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     </head>
     <body>
         <body bgcolor="#000">
         <button onclick="ledON()">LED ON</button>
         <button onclick="ledOFF()">LED OFF</button>
         <button onclick="takePicture()">Take a picture</button>
+        <button id="record" onclick="record(this)">Make GIF!</button>       
       </br>
         <img src="" id= "pictureContainer" alt="WebCam image  made by the webserver">
         <script src="client.js"></script>
+        <script src="js/dependencies/gifshot.min.js"></script>
+        <script src="js/dependencies/prism.min.js"></script>
+        <script src="js/dependencies/esprima.min.js"></script>
+        <script src="js/dependencies/escodegen.min.js"></script>
+        <script src="js/dependencies/lodash.min.js"></script>
+        <script src="js/dependencies/classList.js"></script>
+        <script>        
+            var socket = io();
+
+            // send out LedOn message over socket
+            function ledON() {
+              socket.emit('ledON');
+            }
+
+            // send out ledOFF message over socket
+            function ledOFF() {
+              socket.emit('ledOFF');
+            }
+
+            //-- Addition: Forward the `Take a picture` button-press to the webserver.
+            function takePicture(){
+              socket.emit('takePicture');
+            }
+
+            function startRecording() {
+              socket.emit('startRecording');
+            }
+
+            function stopRecording() {
+              socket.emit('stopRecording');
+            }
+
+            //-- Addition: This function receives the new image name and applies it to html element.
+
+            socket.on('newPicture', function(msg) {
+              console.log('newPicture signal recieved: ' + msg);
+              document.getElementById('pictureContainer').src=msg;
+            });
+
+            socket.on('newGif', function(msg) {
+              console.log('newGif signal recieved: ' + msg);
+              gifshot.createGIF({
+                'images': msg
+              },function(obj) {
+                if(!obj.error) {
+                  var image = obj.image,
+                  animatedImage = document.createElement('img');
+                  animatedImage.src = image;
+                  document.body.appendChild(animatedImage);
+                }
+            });
+            });
+
+            // read the data from the message that the server sent and change the
+            // background of the webpage based on the data in the message
+            socket.on('server-msg', function(msg) {
+              msg = msg.toString();
+              console.log('msg:', msg);
+              switch (msg) {
+                case "light":
+                  document.body.style.backgroundColor = "white";
+                  console.log("white")
+                  break;
+                case "dark":
+                  document.body.style.backgroundColor = "black";
+                  console.log("black");
+                  break;                
+                default:
+                  //console.log("something else");
+                  break;
+              }
+            });            
+        
+            var recording = false;            
+            
+            function makeGif() {
+                console.log("Making gif...");
+            }       
+            
+            function record(button) {
+                if (!recording) {
+                    console.log("Recording...");
+                    toggleRecordingState();
+                    $(button).html("Stop recording and make beautiful GIF!");
+                    startRecording();
+                } else {
+                    console.log("Stopped recording...");
+                    toggleRecordingState();                    
+                    $(button).html("Make GIF!");
+                    stopRecording();
+                }
+            }     
+            
+            function toggleRecordingState() {
+                recording = !recording;
+            }
+        </script>
     </body>
 </html>
